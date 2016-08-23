@@ -46,7 +46,7 @@ use std::io::ErrorKind;
 use std::io::prelude::*;
 
 #[test]
-fn test_transform() {
+fn test_transform_1() {
     // 0x5c30 => 0x00
     let test1 = &[0x5c, 0x30];
     let mut input = std::io::Cursor::new(test1);
@@ -54,7 +54,10 @@ fn test_transform() {
     process_input2(&mut input, &mut output);
     println!("output1: {:?}", output);
     assert_eq!(output, vec![0x00]);
+}
 
+#[test]
+fn test_transform_2() {
     // 0x5c5c30 => 0x5c5c30
     let test2 = &[0x5c, 0x5c, 0x30];
     let mut input2 = std::io::Cursor::new(test2);
@@ -62,7 +65,10 @@ fn test_transform() {
     process_input2(&mut input2, &mut output2);
     println!("output2: {:?}", output2);
     assert_eq!(output2, vec![0x5c, 0x5c, 0x30]);
+}
 
+#[test]
+fn test_transform_3() {
     // 0x5c5c5c30 => 0x5c5c00
     let test3 = &[0x5c, 0x5c, 0x5c, 0x30];
     let mut input3 = std::io::Cursor::new(test3);
@@ -70,7 +76,10 @@ fn test_transform() {
     process_input2(&mut input3, &mut output3);
     println!("output3: {:?}", output3);
     assert_eq!(output3, vec![0x5c, 0x5c, 0x00]);
+}
 
+#[test]
+fn test_transform_4() {
     // 0x5c5c5c5c30 => 0x5c5c5c5c30
     let test4 = &[0x5c, 0x5c, 0x5c, 0x5c, 0x30];
     let mut input4 = std::io::Cursor::new(test4);
@@ -78,7 +87,10 @@ fn test_transform() {
     process_input2(&mut input4, &mut output4);
     println!("output4: {:?}", output4);
     assert_eq!(output4, vec![0x5c, 0x5c, 0x5c, 0x5c, 0x30]);
+}
 
+#[test]
+fn test_transform_5() {
     // 0x5c5c5c3030 => 0x5c5c0030
     let test5 = &[0x5c, 0x5c, 0x5c, 0x30, 0x30];
     let mut input5 = std::io::Cursor::new(test5);
@@ -86,7 +98,10 @@ fn test_transform() {
     process_input2(&mut input5, &mut output5);
     println!("output5: {:?}", output5);
     assert_eq!(output5, vec![0x5c, 0x5c, 0x00, 0x30]);
+}
 
+#[test]
+fn test_transform_6() {
     // 0x5c5c5c5c3030 => 0x5c5c5c5c3030
     let test6 = &[0x5c, 0x5c, 0x5c, 0x5c, 0x30, 0x30];
     let mut input6 = std::io::Cursor::new(test6);
@@ -94,7 +109,10 @@ fn test_transform() {
     process_input2(&mut input6, &mut output6);
     println!("output6: {:?}", output6);
     assert_eq!(output6, vec![0x5c, 0x5c, 0x5c, 0x5c, 0x30, 0x30]);
+}
 
+#[test]
+fn test_transform_7() {
     // 0x5c5c5c40 => 0x5c5c5c40
     let test7 = &[0x5c, 0x5c, 0x5c, 0x40];
     let mut input7 = std::io::Cursor::new(test7);
@@ -102,7 +120,10 @@ fn test_transform() {
     process_input2(&mut input7, &mut output7);
     println!("output7: {:?}", output7);
     assert_eq!(output7, vec![0x5c, 0x5c, 0x5c, 0x40]);
+}
 
+#[test]
+fn test_transform_8() {
     // 0x5c5c5c5c40 => 0x5c5c5c5c40
     let test8 = &[0x5c, 0x5c, 0x5c, 0x5c, 0x40];
     let mut input8 = std::io::Cursor::new(test8);
@@ -110,6 +131,17 @@ fn test_transform() {
     process_input2(&mut input8, &mut output8);
     println!("output8: {:?}", output8);
     assert_eq!(output8, vec![0x5c, 0x5c, 0x5c, 0x5c, 0x40]);
+}
+
+#[test]
+fn test_transform_9() {
+    // 0x5c5c5c5c40 => 0x5c5c5c5c40
+    let test8 = &[0x5c, 0x24, 0x5c, 0x5c, 0x40];
+    let mut input8 = std::io::Cursor::new(test8);
+    let mut output8: Vec<u8> = Vec::new();
+    process_input2(&mut input8, &mut output8);
+    println!("output9: {:?}", output8);
+    assert_eq!(output8, vec![0x5c, 0x24, 0x5c, 0x5c, 0x40]);
 }
 
 fn write_byte<W>(byte: u8, writer: &mut W) -> Result<usize, std::io::Error>
@@ -126,24 +158,42 @@ fn process_input2<R, W>(mut reader: R, mut writer: W) -> Result<(), std::io::Err
     // a. and there is no or even number of 0x5c before 0x5c30, translate this 0x5c30 to 0x00
     // b. if there is odd number of 0x5c before 0x5c30, don't do anything.
     // Ok lets try this again
-    let mut buffer: Vec<u8> = Vec::with_capacity(1024 * 128);
-    loop {
+    // let mut buffer: Vec<u8> = Vec::with_capacity(1024 * 128);
+    
+    'outer: loop {
+        let mut buffer = [0; 1024];
         let read_size = try!(reader.read(&mut buffer[..]));
         let mut five_c: u64 = 0;
 
         // check for likely case first
         if read_size > 0 {
             let mut start_position: usize = 0;
+            let mut last_byte_written: usize = 0;
             loop {
-                println!("looping");
+                println!("looping with start_position = {}", start_position);
                 // Search for either 0x5c or 0x30
                 match memchr2(0x5c, 0x30, &buffer[start_position..]) {
                     Some(location) => {
+                        let location = location + start_position;
+                        // start_position = location;
                         // Move the start_position up to here
                         if buffer[location] == 0x5c {
                             println!("Found 0x5c");
-                            // This just counts the 0x5c's
-                            five_c += 1;
+                            let next_location = location + 1;
+                            if buffer.len() >= next_location {
+                                if buffer[next_location] == 0x5c || buffer[next_location] == 0x30 {
+                                    // This just counts the 0x5c's
+                                    five_c += 1;
+                                } else {
+                                    // for _ in 0..five_c + 1 {
+                                    //     writer.write(&[0x5c]);
+                                    // }
+                                    println!("start: {}; loc: {}", start_position, location);
+                                    writer.write(&buffer[last_byte_written..location]);
+                                    five_c = 0;
+                                }
+                            }
+                            
                             println!("five_c = {}", five_c);
                         } else if buffer[location] == 0x30 {
                             println!("Found 0x30");
@@ -151,38 +201,56 @@ fn process_input2<R, W>(mut reader: R, mut writer: W) -> Result<(), std::io::Err
                             if location > 0 {
                                 if buffer[location - 1] == 0x5c {
                                     // Now we have 0x5c, 0x30
+                                    println!("5c == {}", five_c);
                                     if (five_c - 1) % 2 == 0 {
                                         // 0x00 should be written
                                         // Remove the 0x30
-                                        println!("buffer.remove({})", location);
-                                        buffer.remove(location);
-                                        // Change the 0x5c to 0x00
-                                        println!("buffer[{}-1] = 0x00", location);
-                                        buffer[location - 1] = 0x00;
+                                        // println!("buffer.remove({})", location);
+                                        // buffer.remove(location);
+                                        // // Change the 0x5c to 0x00
+                                        // println!("buffer[{}-1] = 0x00", location);
+                                        // buffer[location - 1] = 0x00;
+                                        println!("Writing to output buffer!");
+                                        println!("Going from {} to {}", start_position, location);
+                                        for _ in 0..five_c - 1 {
+                                            writer.write(&[0x5c]);
+                                        }
+                                        writer.write(&buffer[start_position..(start_position + location - 1)]);
+                                        last_byte_written = start_position;
+                                        writer.write(&[0x00]);
                                     } else {
                                         // odd number of 0x5c's
-                                        // no-op
+                                        println!("wrong number of 0x5c");
+                                        println!("stuff: {}", buffer[location]);
+                                        println!("start_pos: {}, location: {}", start_position, location);
+                                        println!("Outputting {} through {}", start_position - five_c as usize, location + 1);
+                                        last_byte_written = start_position;
+                                        writer.write(&buffer[start_position - five_c as usize..location + 1]);
                                     }
                                 } else {
                                     // No 0x5c before this 0x30
-                                    // no-op
+                                    println!("no 0x5c");
+                                    writer.write(&buffer[start_position - five_c as usize..(start_position + location + 1)]);
+                                    last_byte_written = start_position;
                                 }
                             } else {
                                 // location == 0
                                 // no-op
                             }
                         }
-                        println!("start_position = {}", location);
+
                         // Advance the start position
-                        start_position = location;
+                        start_position = location + 1;
+                        println!("location = {} || start_position = {}", location, start_position);
                     }
                     None => {
                         // write this entire buffer back out.
-                        println!("Writing the entire buffer out");
-                        try!(writer.write(&buffer[..]));
-                        buffer.clear();
+                        if read_size - 1 >= start_position {
+                            println!("Writing the entire buffer ({:?}) out from {} to {}", buffer.to_vec(), start_position, read_size - 1);
+                            try!(writer.write(&buffer[start_position..read_size - 1]));
+                        }
                         // break the inner loop
-                        break;
+                        break 'outer;
                     }
                 }
             }
