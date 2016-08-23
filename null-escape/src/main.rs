@@ -31,11 +31,14 @@
 //!    000001a
 //!    Author : vamsi Nov 2015
 
+extern crate memchr;
+
 use std::io::{BufReader, BufWriter};
 use std::io;
 use std::io::ErrorKind;
 use std::io::prelude::*;
 
+use memchr::{memchr};
 
 #[test]
 fn test_transform_1() {
@@ -183,32 +186,67 @@ fn process_input<R, W>(mut reader: R, mut writer: W) -> Result<(), std::io::Erro
           W: Write
 {
     // As long as there's another byte this loop will continue
-    // 'outer: loop {
-    //     let next_byte = reader.by_ref().bytes().next();
-    loop {
-        let mut buffer: Vec<u8> = Vec::with_capacity(1024 * 128);
-        let read = try!(reader.read_until(0x5c, &mut buffer));
-        if read == 0 {
+
+    // loop {
+    //     let mut buffer: Vec<u8> = Vec::with_capacity(1024 * 128);
+    //     let read = try!(reader.read_until(0x5c, &mut buffer));
+    //     if read == 0 {
+    //         return Ok(());
+    //     }
+    //     // println!("buffer: {:?}", buffer);
+    //     if let Some(last) = buffer.pop() {
+
+    //         writer.write(&buffer[..buffer.len()]);
+    //         if last != 0x5c {
+    //             writer.write(&[last]);
+    //         }
+    //         let mut count: u64 = 1;
+    //         // break_shit(last, &mut writer, &mut count);
+    //         for byte in reader.by_ref().bytes() {
+    //             if let Ok(read_byte) = byte {
+    //                 if let Ok(_) = break_shit(read_byte, &mut writer, &mut count) {
+    //                     break;
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
+    let mut buffer = [0; 1024];
+    while let Ok(read_size) = (reader.read(&mut buffer[..])) {
+        if read_size == 0 {
             return Ok(());
         }
-        // println!("buffer: {:?}", buffer);
-        if let Some(last) = buffer.pop() {
+        // println!("{:?}", buffer.to_vec());
 
-            writer.write(&buffer[..buffer.len()]);
-            if last != 0x5c {
-                writer.write(&[last]);
-            }
-            let mut count: u64 = 1;
-            // break_shit(last, &mut writer, &mut count);
-            for byte in reader.by_ref().bytes() {
-                if let Ok(read_byte) = byte {
-                    if let Ok(_) = break_shit(read_byte, &mut writer, &mut count) {
+        let mut count = 1;
+        // break_shit(0x5c, &mut writer, &mut count);
+        let mut start_pos = 0;
+        match memchr(0x5c, &buffer[start_pos..]) {
+            Some(location) => {
+                let next_loc = if location == 0 {
+                    0
+                } else {
+                    location - 1
+                };
+                writer.write(&buffer[start_pos..next_loc]);
+                start_pos = location;
+                for byte in buffer[location + 1..].iter() {
+                    
+                    start_pos += 1;
+                    if let Ok(_) = break_shit(*byte, &mut writer, &mut count) {
                         break;
                     }
                 }
-            }
+            },
+            None => {}
         }
     }
+
+    
+
+
+    
+    Ok(())
 }
 
 fn main() {
