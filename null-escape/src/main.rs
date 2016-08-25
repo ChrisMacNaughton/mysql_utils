@@ -158,7 +158,10 @@ fn process_byte<W: Write>(byte: u8, writer: &mut W, count: &mut u64) -> Result<(
             // in the output,
             // and then 0x30
             //
-            try!(writer.write(&[0x5c, 0x30]));
+            let len = try!(writer.write(&[0x5c, 0x30]));
+            if len < 2 {
+                return Err(std::io::Error::new(ErrorKind::WriteZero, "Could not write byte"))
+            }
             return Ok(());
         }
     } else if byte == 0x5c {
@@ -166,7 +169,10 @@ fn process_byte<W: Write>(byte: u8, writer: &mut W, count: &mut u64) -> Result<(
         *count += 1;
     } else {
         // put the outstanding 0x5c and the char we just read in output
-        try!(writer.write(&[0x5c, byte]));
+        let len = try!(writer.write(&[0x5c, byte]));
+        if len < 2 {
+            return Err(std::io::Error::new(ErrorKind::WriteZero, "Could not write byte"))
+        }
         return Ok(());
     }
     Err(std::io::Error::new(std::io::ErrorKind::Other, ""))
